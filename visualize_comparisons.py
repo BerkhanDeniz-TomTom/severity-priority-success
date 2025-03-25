@@ -74,6 +74,24 @@ def create_comparison_visualization(data_list, labels=None, output_file=None):
         palette='viridis'
     )
     
+    # Add average lines for each metric
+    for metric in ['Severity', 'Occurrence', 'Priority']:
+        # Get the average for this metric
+        metric_avg = df[df['Metric'] == metric]['Match Rate (%)'].mean()
+        
+        # Calculate the x position for this metric
+        metric_positions = [p.get_x() + p.get_width() / 2 for p in chart.patches 
+                          if p.get_x() == chart.patches[df[df['Metric'] == metric].index[0]].get_x()]
+        x_min = min(metric_positions) - 0.2
+        x_max = max(metric_positions) + 0.2
+        
+        # Draw the average line
+        plt.plot([x_min, x_max], [metric_avg, metric_avg], 'r--', linewidth=1.5)
+        
+        # Add average text
+        plt.text(x_max + 0.05, metric_avg, f'Avg: {metric_avg:.1f}%', 
+                va='center', ha='left', color='red', fontsize=10)
+    
     # Customize the chart
     plt.title('Comparison of Match Rates Across Measurements', fontsize=16)
     plt.xlabel('Assessment Metric', fontsize=14)
@@ -105,11 +123,19 @@ def create_comparison_visualization(data_list, labels=None, output_file=None):
     # Pivot the data for a cleaner display
     pivot_df = df.pivot(index='Measurement', columns='Metric', values='Match Rate (%)')
     
-    # Add an average column
-    pivot_df['Average'] = pivot_df.mean(axis=1)
+    # Calculate metric averages across all measurements
+    metric_averages = pivot_df.mean(axis=0)
+    
+    # Add the averages as a new row
+    pivot_df.loc['AVERAGE'] = metric_averages
     
     # Print the table
     print(pivot_df.round(2))
+    print("\nKey Insights:")
+    print(f"- Average Severity Match Rate: {metric_averages['Severity']:.2f}%")
+    print(f"- Average Occurrence Match Rate: {metric_averages['Occurrence']:.2f}%")
+    print(f"- Average Priority Match Rate: {metric_averages['Priority']:.2f}%")
+    print(f"- Overall Average Match Rate: {metric_averages.mean():.2f}%")
     
     # Save the comparison table if requested
     if output_file:
